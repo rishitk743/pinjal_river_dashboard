@@ -1,0 +1,40 @@
+name: Sync plan data from Google Sheets
+
+on:
+  schedule:
+    # 03:00 UTC = 08:30 IST, once a day
+    - cron: "0 3 * * *"
+  workflow_dispatch: {} # lets you trigger it manually from the Actions tab
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm ci
+
+      - name: Run ETL against the Google Sheet
+        env:
+          GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
+          PINJAL_SHEET_ID: ${{ secrets.PINJAL_SHEET_ID }}
+        run: npm run etl
+
+      - name: Commit and push if the data changed
+        run: |
+          git config user.name "pinjal-data-sync"
+          git config user.email "actions@github.com"
+          git add public/data
+          if git diff --cached --quiet; then
+            echo "No data changes — nothing to commit."
+          else
+            git commit -m "Sync plan data from Google Sheets ($(date -u +%Y-%m-%d))"
+            git push
+          fi

@@ -1,0 +1,66 @@
+PINJAL RIVER TRACKER — build v5 (rules-driven)
+==============================================
+
+HOW TO CONFIRM YOU ARE RUNNING THIS BUILD
+-----------------------------------------
+Bottom-left of the sidebar shows a green chip reading:   Build v5 · rules-driven
+The dashboard subtitle ends with:                        ... · build v5
+The sidebar has a "Dependency check" item under PLAN STRUCTURE.
+The priority filter reads "All priorities / P1 / P2 ..." (not "All years / 1 / 2").
+
+If you do not see those, you are running an older copy. See below.
+
+
+RUN IT (clean)
+--------------
+1. Extract this zip to a NEW EMPTY folder.
+   Do NOT extract on top of an older copy — a stale .next build folder
+   will keep serving the old interface even after you replace the source.
+
+2. Open a terminal in that folder and run:
+
+     npm install
+     npm run dev
+
+3. Open http://localhost:3000
+
+
+IF YOU ALREADY EXTRACTED OVER AN OLD COPY
+-----------------------------------------
+Delete the build cache and node_modules, then rebuild:
+
+  Windows (PowerShell, inside the project folder):
+     Remove-Item -Recurse -Force .next
+     Remove-Item -Recurse -Force node_modules
+     npm install
+     npm run dev
+
+  macOS / Linux:
+     rm -rf .next node_modules
+     npm install
+     npm run dev
+
+Then hard-refresh the browser:  Ctrl+Shift+R  (Windows)  /  Cmd+Shift+R  (Mac)
+
+
+STILL SEEING THE OLD ONE?
+-------------------------
+- Check you extracted the right file. Earlier zips had the SAME filename,
+  so Windows may have saved them as "(1)", "(2)" etc. This one is
+  pinjal-tracker-v5.zip.
+- Make sure no old dev server is still running on port 3000
+  (close other terminals, or run: npm run dev -- -p 3005 and use that port).
+- Open the browser devtools Network tab, tick "Disable cache", reload.
+
+
+WHAT CHANGED IN v5
+------------------
+- Allotment is driven by a rules table (public/data/rules.json + lib/rules.ts).
+  Change a rule, the whole dashboard follows. Nothing is baked into a work.
+- "Year" renamed to "Priority" everywhere. Priority is a sequencing rank,
+  not a calendar year.
+- The 4th KPI now follows the active priority filter instead of being
+  hard-coded to year 1.
+- Work ID and the original priority are no longer shown (backend/audit only).
+- New "Dependency check" page: ridge-before-valley verification, 139/139 pass.
+- Light and dark themes, both colour-validated.

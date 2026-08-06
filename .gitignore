@@ -1,0 +1,18 @@
+node_modules
+.next
+out
+.DS_Store
+*.tsbuildinfo
+next-env.d.ts
+.vercel
+
+# secrets — never commit real env files or service-account key material
+.env
+.env*.local
+*service-account*.json
+*serviceaccount*.json
+pinjal-river-*.json
+
+# ETL working state — a local snapshot of public/data used to diff regenerated
+# output against, not something the app ships or needs to track in git
+scratch
