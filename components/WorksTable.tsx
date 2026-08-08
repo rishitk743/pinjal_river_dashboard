@@ -1,7 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import clsx from "clsx";
-import { ArrowUp, ArrowDown, ChevronsUpDown, MapPin, X } from "lucide-react";
+import { ArrowUp, ArrowDown, ChevronsUpDown, MapPin, X, ChevronDown } from "lucide-react";
 import type { Work } from "@/lib/types";
 import type { ColumnSpec } from "@/lib/config";
 import type { RuleBook } from "@/lib/rules";
@@ -11,6 +11,7 @@ import ColumnFilterMenu, { type FilterOption } from "./ColumnFilterMenu";
 
 const PAGE = 150;
 const NONE = "—"; // sentinel for blank/null cells so they're filterable as their own value
+const coordsText = (lat: number | null, lng: number | null) => (lat == null || lng == null ? null : `${lat}, ${lng}`);
 
 export default function WorksTable({ works, columns, stages, book }: {
   works: Work[]; columns: ColumnSpec[]; stages: Record<string, string>; book: RuleBook;
@@ -20,7 +21,10 @@ export default function WorksTable({ works, columns, stages, book }: {
   const [colFilters, setColFilters] = useState<Record<string, Set<string>>>({});
 
   const val = (w: Work, k: string) =>
-    k === "agency" ? book.lead(w) : k === "location" ? w.lat : (w as unknown as Record<string, unknown>)[k];
+    k === "agency" ? book.lead(w)
+    : k === "location" || k === "startCoords" ? w.lat
+    : k === "endCoords" ? w.elat
+    : (w as unknown as Record<string, unknown>)[k];
 
   // Canonical display value per column, used both to build filter option lists
   // and to test a row against the active filters — mirrors what cell() renders.
@@ -107,6 +111,11 @@ export default function WorksTable({ works, columns, stages, book }: {
         </a>
       );
     }
+    if (c.render === "coords") {
+      const text = c.key === "startCoords" ? coordsText(w.lat, w.lng) : coordsText(w.elat, w.elng);
+      if (!text) return <span style={{ color: "var(--ink-3)", opacity: .45 }}>—</span>;
+      return <span className="tabular-nums text-[11.5px]" style={{ color: "var(--ink-3)" }}>{text}</span>;
+    }
     const v = (w as unknown as Record<string, unknown>)[c.key as string];
     if (v == null || v === "") return <span style={{ color: "var(--ink-3)", opacity: .45 }}>—</span>;
     if (typeof v === "number") return <span className="tabular-nums">{v.toLocaleString("en-IN")}</span>;
@@ -114,28 +123,52 @@ export default function WorksTable({ works, columns, stages, book }: {
     return String(v);
   };
 
+  const filterBar = activeFilterEntries.length > 0 && (
+    <div className="flex flex-wrap items-center gap-1.5 border-b px-3 py-2" style={{ borderColor: "var(--line)", background: "var(--surface-2)" }}>
+      <span className="text-[11.5px]" style={{ color: "var(--ink-3)" }}>Filters:</span>
+      {activeFilterEntries.map(([key, set]) => {
+        const c = columns.find((c) => String(c.key) === key);
+        return (
+          <span key={key} className="chip" style={{ background: "var(--brand-wash)", color: "var(--brand-ink)" }}>
+            {c?.label}: {set.size}
+            <button type="button" aria-label={`Clear ${c?.label} filter`} onClick={() => setColumnFilter(key, new Set())}>
+              <X className="h-3 w-3" />
+            </button>
+          </span>
+        );
+      })}
+      <button type="button" className="ml-1 text-[11.5px] font-medium" style={{ color: "var(--ink-3)" }} onClick={clearAllFilters}>
+        Clear all
+      </button>
+    </div>
+  );
+
+  const footer = (
+    <div className="flex items-center justify-between gap-3 border-t px-4 py-2.5"
+         style={{ borderColor: "var(--line)", background: "var(--surface-2)" }}>
+      <span className="text-[12px]" style={{ color: "var(--ink-3)" }}>
+        {Math.min(shown, rows.length).toLocaleString("en-IN")} of {rows.length.toLocaleString("en-IN")} works
+        {activeFilterEntries.length > 0 && <> · filtered from {works.length.toLocaleString("en-IN")}</>}
+      </span>
+      {shown < rows.length && (
+        <button className="btn btn-ghost" onClick={() => setShown((s) => s + PAGE * 6)}>Load more</button>
+      )}
+    </div>
+  );
+
+  const SORTABLE_MOBILE_FIELDS = [
+    { k: "p", label: "Priority" },
+    { k: "v", label: "Village" },
+    { k: "st", label: "Treatment stage" },
+    { k: "ar", label: "Area" },
+  ];
+
   return (
     <div className="overflow-hidden rounded-[12px] border" style={{ borderColor: "var(--line)" }}>
-      {activeFilterEntries.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5 border-b px-3 py-2" style={{ borderColor: "var(--line)", background: "var(--surface-2)" }}>
-          <span className="text-[11.5px]" style={{ color: "var(--ink-3)" }}>Filters:</span>
-          {activeFilterEntries.map(([key, set]) => {
-            const c = columns.find((c) => String(c.key) === key);
-            return (
-              <span key={key} className="chip" style={{ background: "var(--brand-wash)", color: "var(--brand-ink)" }}>
-                {c?.label}: {set.size}
-                <button type="button" aria-label={`Clear ${c?.label} filter`} onClick={() => setColumnFilter(key, new Set())}>
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
-            );
-          })}
-          <button type="button" className="ml-1 text-[11.5px] font-medium" style={{ color: "var(--ink-3)" }} onClick={clearAllFilters}>
-            Clear all
-          </button>
-        </div>
-      )}
-      <div className="scroll max-h-[62vh] overflow-auto">
+      {filterBar}
+
+      {/* Desktop / tablet: the full column-filterable table. */}
+      <div className="scroll hidden max-h-[62vh] overflow-auto md:block">
         <table className="w-full border-collapse">
           <thead>
             <tr>
@@ -176,16 +209,82 @@ export default function WorksTable({ works, columns, stages, book }: {
           </tbody>
         </table>
       </div>
-      <div className="flex items-center justify-between gap-3 border-t px-4 py-2.5"
-           style={{ borderColor: "var(--line)", background: "var(--surface-2)" }}>
-        <span className="text-[12px]" style={{ color: "var(--ink-3)" }}>
-          {Math.min(shown, rows.length).toLocaleString("en-IN")} of {rows.length.toLocaleString("en-IN")} works
-          {activeFilterEntries.length > 0 && <> · filtered from {works.length.toLocaleString("en-IN")}</>}
-        </span>
-        {shown < rows.length && (
-          <button className="btn btn-ghost" onClick={() => setShown((s) => s + PAGE * 6)}>Load more</button>
+
+      {/* Mobile: stacked cards — no horizontal scroll. Secondary fields are
+          collapsed behind a per-card "Details" toggle instead of 14 columns wide. */}
+      <div className="md:hidden">
+        <div className="flex items-center gap-2 border-b px-3 py-2" style={{ borderColor: "var(--line)" }}>
+          <span className="text-[11.5px] shrink-0" style={{ color: "var(--ink-3)" }}>Sort:</span>
+          <select className="field flex-1 py-1 text-[12px]" value={sort.k}
+                  onChange={(e) => setSort({ k: e.target.value, d: 1 })}>
+            {SORTABLE_MOBILE_FIELDS.map((f) => <option key={f.k} value={f.k}>{f.label}</option>)}
+          </select>
+          <button type="button" className="btn btn-ghost shrink-0" onClick={() => setSort((s) => ({ ...s, d: s.d === 1 ? -1 : 1 }))}>
+            {sort.d === 1 ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />}
+          </button>
+        </div>
+        <div className="scroll max-h-[62vh] overflow-auto">
+          {rows.slice(0, shown).map((w) => (
+            <WorkCard key={w.i} work={w} columns={columns} book={book} cell={cell} />
+          ))}
+        </div>
+      </div>
+
+      {footer}
+    </div>
+  );
+}
+
+function WorkCard({ work, columns, book, cell }: {
+  work: Work; columns: ColumnSpec[]; book: RuleBook; cell: (c: ColumnSpec, w: Work) => React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const major = columns.filter((c) => !c.minorOnMobile && c.key !== "location");
+  const minor = columns.filter((c) => c.minorOnMobile);
+  const locationCol = columns.find((c) => c.key === "location");
+  const agency = book.lead(work);
+
+  return (
+    <div className="border-b px-3 py-3" style={{ borderColor: "var(--line)" }}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="truncate text-[13.5px] font-medium" style={{ color: "var(--ink)" }}>{work.v}</p>
+          <p className="mt-0.5 flex items-center gap-1.5">
+            <AgencyTag agency={agency} color={agencyColor(agency)} short={agencyShort(agency)} />
+          </p>
+        </div>
+        <PriorityPip p={work.p} />
+      </div>
+
+      <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[12.5px]">
+        {major.filter((c) => c.key !== "v" && c.key !== "agency" && c.key !== "p").map((c) => (
+          <div key={String(c.key)} className="min-w-0">
+            <p className="text-[10.5px] uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>{c.label}</p>
+            <div className="truncate">{cell(c, work)}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-2.5 flex items-center gap-2">
+        {locationCol && cell(locationCol, work)}
+        {minor.length > 0 && (
+          <button type="button" className="btn btn-ghost ml-auto" onClick={() => setOpen((o) => !o)}>
+            {open ? "Hide" : "Details"}
+            <ChevronDown className="h-3.5 w-3.5 transition-transform" style={open ? { transform: "rotate(180deg)" } : undefined} />
+          </button>
         )}
       </div>
+
+      {open && (
+        <div className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-1.5 border-t pt-2.5 text-[12.5px]" style={{ borderColor: "var(--line)" }}>
+          {minor.map((c) => (
+            <div key={String(c.key)} className="min-w-0">
+              <p className="text-[10.5px] uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>{c.label}</p>
+              <div className="truncate">{cell(c, work)}</div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

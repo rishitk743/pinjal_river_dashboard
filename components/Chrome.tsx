@@ -9,9 +9,6 @@ import {
 } from "lucide-react";
 import { useTheme } from "./Theme";
 
-/** Bump on every release so a stale copy is obvious at a glance. */
-export const BUILD = "v5 · rules-driven";
-
 const NAV: { section: string; items: { href: string; label: string; icon: LucideIcon }[] }[] = [
   { section: "Overview", items: [
     { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -95,10 +92,7 @@ export function Shell({ title, subtitle, actions, children }: {
         <Brand />
         <NavList />
         <p className="px-6 text-[10.5px] leading-relaxed" style={{ color: "var(--ink-3)" }}>
-          <span className="chip" style={{ background: "var(--brand-wash)", color: "var(--brand-ink)" }}>
-            Build {BUILD}
-          </span>
-          <br />Govardhan Ecovillage · GIZ · RuDRA
+          Govardhan Ecovillage · GIZ · RuDRA
         </p>
       </aside>
 

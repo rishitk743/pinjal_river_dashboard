@@ -31,6 +31,8 @@ export interface Work {
   ar: number | null;    // area ha
   lat: number | null;   // start latitude — ~18% of works lack coordinates
   lng: number | null;   // start longitude
+  elat: number | null;  // end latitude (line-shaped works only; equals start for point works)
+  elng: number | null;  // end longitude
   ta: string | null;    // technical assistant
   tsx: string;          // TA status
 }

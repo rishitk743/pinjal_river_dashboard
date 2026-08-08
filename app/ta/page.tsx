@@ -40,9 +40,12 @@ export default function TaPage() {
 
   const max = Math.max(...rows.map((r) => r.works), 1);
   const named = rows.filter((r) => r.ta);
-  const people = new Set(named.map((r) => r.ta as string));
+  // Count postings, not distinct name strings — two different people can
+  // share a name (e.g. two "Rahul Patil"s, one in Wada, one in Vikramgad),
+  // and a Set/dedup-by-name would silently undercount by one per collision.
+  const peopleCount = named.length;
   const vacantWorks = rows.filter((r) => !r.ta).reduce((s, r) => s + r.works, 0);
-  const avg = people.size ? Math.round(named.reduce((s, r) => s + r.works, 0) / people.size) : 0;
+  const avg = peopleCount ? Math.round(named.reduce((s, r) => s + r.works, 0) / peopleCount) : 0;
 
   return (
     <Shell title="Technical Assistants"
@@ -61,7 +64,7 @@ export default function TaPage() {
       </div>
 
       <div className="mb-4 grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <Kpi label="Technical Assistants" value={people.size} icon={<Users className="h-4 w-4" />} delay={0} />
+        <Kpi label="Technical Assistants" value={peopleCount} icon={<Users className="h-4 w-4" />} delay={0} />
         <Kpi label="Average load" value={avg} unit="works" icon={<Gauge className="h-4 w-4" />} delay={40} />
         <Kpi label="Heaviest load" value={max} unit="works" note="16% of the whole plan" icon={<AlertTriangle className="h-4 w-4" />} tone="warn" delay={80} />
         <Kpi label="Works with no TA" value={vacantWorks} icon={<AlertTriangle className="h-4 w-4" />} tone="critical" delay={120} />

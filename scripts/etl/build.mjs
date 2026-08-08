@@ -49,6 +49,7 @@ const iWorkId = idx("Work_ID"), iLayer = idx("Layer_Name"), iWorkCatg = idx("Wor
   iActivity2 = idx("Activity 2"), iVillage = idx("Village"), iTaluka = idx("Subdistric"),
   iDistrict = idx("District"), iArea = idx("Area_ha"), iForest = idx("Forest Type"),
   iRule = idx("Allotment_Rule"), iSeq = idx("Sequence_Stage"), iLat = idx("St_Lat"), iLng = idx("St_Long"),
+  iEndLat = idx("End_Lat"), iEndLng = idx("End_Long"),
   iPriority = idx("Priority_Year_Corrected") !== -1 ? idx("Priority_Year_Corrected") : idx("Priority");
 
 // A renamed/missing column silently produces `undefined` for every one of
@@ -63,7 +64,7 @@ const missing = Object.entries(REQUIRED_COLUMNS).filter(([, i]) => i === -1).map
 if (missing.length) {
   throw new Error(`Action Plan sheet is missing required column(s): ${missing.join(", ")}. The sheet's header row must have changed — update scripts/etl/build.mjs's column mapping before re-running.`);
 }
-for (const [name, i] of Object.entries({ "Activity 2": iActivity2, St_Lat: iLat, St_Long: iLng, Area_ha: iArea })) {
+for (const [name, i] of Object.entries({ "Activity 2": iActivity2, St_Lat: iLat, St_Long: iLng, End_Lat: iEndLat, End_Long: iEndLng, Area_ha: iArea })) {
   if (i === -1) console.warn(`[etl] Optional column "${name}" not found — that field will be blank for every work.`);
 }
 
@@ -90,8 +91,11 @@ for (const r of rows) {
   const gp = gpByVillageTaluka.get(`${village}|${taluka}`) ?? null;
   const roster = workRosterById.get(id) ?? { ta: null, tsx: "Unknown", ft: forestTypeOrder.get(r[iForest]) };
 
-  const lat = r[iLat] != null && r[iLat] !== "" ? Math.round(Number(r[iLat]) * 1e6) / 1e6 : null;
-  const lng = r[iLng] != null && r[iLng] !== "" ? Math.round(Number(r[iLng]) * 1e6) / 1e6 : null;
+  const round6 = (v) => (v != null && v !== "" ? Math.round(Number(v) * 1e6) / 1e6 : null);
+  const lat = round6(r[iLat]);
+  const lng = round6(r[iLng]);
+  const elat = round6(r[iEndLat]);
+  const elng = round6(r[iEndLng]);
 
   works.push({
     i: id,
@@ -106,7 +110,7 @@ for (const r of rows) {
     st: Number(r[iSeq]),
     p: Number(r[iPriority]),
     ar: r[iArea] != null && r[iArea] !== "" ? Math.round(Number(r[iArea]) * 1000) / 1000 : null,
-    lat, lng,
+    lat, lng, elat, elng,
     ta: roster.ta,
     tsx: roster.tsx,
     taluka,
@@ -285,7 +289,7 @@ const byTaluka = new Map();
 for (const w of works) {
   const k = slug(w.taluka);
   if (!byTaluka.has(k)) byTaluka.set(k, []);
-  byTaluka.get(k).push({ i: w.i, v: w.v, gp: w.gp, rk: w.rk, lg: w.lg, wc: w.wc, ac: w.ac, ac2: w.ac2, ft: w.ft, st: w.st, p: w.p, ar: w.ar, lat: w.lat, lng: w.lng, ta: w.ta, tsx: w.tsx });
+  byTaluka.get(k).push({ i: w.i, v: w.v, gp: w.gp, rk: w.rk, lg: w.lg, wc: w.wc, ac: w.ac, ac2: w.ac2, ft: w.ft, st: w.st, p: w.p, ar: w.ar, lat: w.lat, lng: w.lng, elat: w.elat, elng: w.elng, ta: w.ta, tsx: w.tsx });
 }
 for (const [k, list] of byTaluka) writeFileSync(`${DATA_DIR}/works/${k}.json`, JSON.stringify(list));
 

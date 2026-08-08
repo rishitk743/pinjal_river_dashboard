@@ -6,14 +6,17 @@ import type { Work } from "./types";
 
 export interface ColumnSpec {
   label: string;
-  key: keyof Work | "agency" | "location";
+  key: keyof Work | "agency" | "location" | "startCoords" | "endCoords";
   width?: number;
   align?: "right";
-  render?: "agency" | "priority" | "confidence" | "stage" | "rule" | "maps";
+  render?: "agency" | "priority" | "confidence" | "stage" | "rule" | "maps" | "coords";
   /** Column header gets a multi-select filter menu. Default true — set false
    *  for columns that aren't meaningfully filterable (a free-form link, a
    *  continuous number). */
   filterable?: boolean;
+  /** Hidden below the `md` breakpoint's mobile card view — for columns that
+   *  are secondary detail, not needed to identify or act on a row at a glance. */
+  minorOnMobile?: boolean;
 }
 
 export interface ViewConfig {
@@ -28,17 +31,19 @@ export interface ViewConfig {
 // The original priority is deliberately not shown — the plan is the plan now.
 export const WORK_COLUMNS: ColumnSpec[] = [
   { label: "Village", key: "v", width: 140 },
-  { label: "Gram Panchayat", key: "gp", width: 150 },
+  { label: "Gram Panchayat", key: "gp", width: 150, minorOnMobile: true },
   { label: "Lead agency", key: "agency", width: 190, render: "agency" },
-  { label: "Work category", key: "wc", width: 170 },
+  { label: "Work category", key: "wc", width: 170, minorOnMobile: true },
   { label: "Activity", key: "ac", width: 220 },
-  { label: "Activity detail", key: "ac2", width: 240 },
-  { label: "Treatment stage", key: "st", width: 210, render: "stage" },
+  { label: "Activity detail", key: "ac2", width: 240, minorOnMobile: true },
+  { label: "Treatment stage", key: "st", width: 210, render: "stage", minorOnMobile: true },
   { label: "Priority", key: "p", width: 84, render: "priority" },
-  { label: "Area (ha)", key: "ar", width: 92, align: "right", filterable: false },
+  { label: "Area (ha)", key: "ar", width: 92, align: "right", filterable: false, minorOnMobile: true },
   { label: "Location", key: "location", width: 110, render: "maps", filterable: false },
-  { label: "Technical Assistant", key: "ta", width: 165 },
-  { label: "Rule", key: "rk", width: 190, render: "rule" },
+  { label: "Start (lat, long)", key: "startCoords", width: 170, render: "coords", filterable: false, minorOnMobile: true },
+  { label: "End (lat, long)", key: "endCoords", width: 170, render: "coords", filterable: false, minorOnMobile: true },
+  { label: "Technical Assistant", key: "ta", width: 165, minorOnMobile: true },
+  { label: "Rule", key: "rk", width: 190, render: "rule", minorOnMobile: true },
 ];
 
 export const VIEWS: ViewConfig[] = [

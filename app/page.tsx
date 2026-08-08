@@ -19,6 +19,10 @@ export default function Home() {
       works: data.meta.totalWorks,
       area: data.agencies.reduce((s, a) => s + a.areaHa, 0),
       byPriority,
+      // Count postings, not distinct name strings — two different people can
+      // share a name (e.g. two "Rahul Patil"s, one in Wada, one in Vikramgad),
+      // and a Set/dedup-by-name would silently undercount by one per collision.
+      taCount: data.tas.filter((x) => x.ta).length,
       vacant: data.tas.filter((x) => !x.ta).reduce((s, x) => s + x.works, 0),
       noList: data.villages.filter((v) => v.status.startsWith("Not covered")).reduce((s, v) => s + v.works, 0),
       busiest: [...data.tas].filter((x) => x.ta).sort((a, b) => b.works - a.works),
@@ -32,12 +36,12 @@ export default function Home() {
   const maxPriority = Math.max(...t.byPriority);
 
   return (
-    <Shell title="Dashboard" subtitle="19,268 works · 136 villages · Palghar & Nashik · build v5">
+    <Shell title="Dashboard" subtitle="19,268 works · 136 villages · Palghar & Nashik">
       <div className="mb-4 grid grid-cols-2 gap-3 xl:grid-cols-4">
         <Kpi label="Total works" value={t.works} icon={<Layers className="h-4 w-4" />} delay={0} />
         <Kpi label="Villages" value={data.meta.villages.length} note={`${data.meta.gramPanchayats.length} gram panchayats`} icon={<MapPin className="h-4 w-4" />} delay={40} />
         <Kpi label="Area treated" value={Math.round(t.area)} unit="ha" icon={<Maximize className="h-4 w-4" />} delay={80} />
-        <Kpi label="Technical Assistants" value={data.meta.tas.length} note="1 post vacant" icon={<Users className="h-4 w-4" />} delay={120} />
+        <Kpi label="Technical Assistants" value={t.taCount} note="1 post vacant" icon={<Users className="h-4 w-4" />} delay={120} />
       </div>
 
       {/* Delivery risks — status colour always with icon + label */}
