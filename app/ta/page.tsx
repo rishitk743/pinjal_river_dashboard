@@ -1,6 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
-import { Users, Download, Search, Phone, AlertTriangle, Gauge, ChevronDown, ListChecks } from "lucide-react";
+import { Users, Download, Search, AlertTriangle, Gauge, ChevronDown, ListChecks } from "lucide-react";
 import { Shell } from "@/components/Chrome";
 import { Kpi, Panel, Bar, PriorityBar, PriorityLegend, Skeleton, Chip, AgencyTag, Empty } from "@/components/Ui";
 import { useAggregates } from "@/lib/data";
@@ -29,7 +29,7 @@ export default function TaPage() {
 
   const actions = data && (
     <button className="btn btn-ghost" onClick={() => download("pinjal-ta-allocation.csv", toCsv(
-      rows.map((r) => ({ taluka: r.taluka, office: r.office, ta: r.ta ?? "(vacant)", mobile: r.mobile ?? "",
+      rows.map((r) => ({ taluka: r.taluka, office: r.office, ta: r.ta ?? "(vacant)",
         status: r.status, works: r.works, villages: r.villages.join("; "), gramPanchayats: r.gramPanchayats.join("; ") }))))}>
       <Download className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Export</span>
     </button>
@@ -88,11 +88,6 @@ export default function TaPage() {
                     </span>
                     <Chip kind={taStatusKind(t.status)}>{t.ta ? "Assigned" : "No TA"}</Chip>
                     <span className="text-[12px]" style={{ color: "var(--ink-3)" }}>{t.office}</span>
-                    {t.mobile && (
-                      <a href={`tel:${t.mobile}`} className="chip" style={{ background: "var(--brand-wash)", color: "var(--brand-ink)" }}>
-                        <Phone className="h-3 w-3" />{t.mobile}
-                      </a>
-                    )}
                   </div>
                   <span className="shrink-0 text-[12px] tabular-nums" style={{ color: "var(--ink-3)" }}>
                     <strong style={{ color: "var(--ink)" }}>{t.works.toLocaleString("en-IN")}</strong> works ·

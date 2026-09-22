@@ -1,6 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
-import { MapPin, Download, Search, Phone, Layers, Maximize } from "lucide-react";
+import { MapPin, Download, Search, Layers, Maximize } from "lucide-react";
 import { Shell } from "@/components/Chrome";
 import { Kpi, Panel, PriorityBar, PriorityLegend, Skeleton, Chip, Empty } from "@/components/Ui";
 import { useAggregates } from "@/lib/data";
@@ -27,7 +27,7 @@ export default function VillagesPage() {
   const actions = data && (
     <button className="btn btn-ghost" onClick={() => download("pinjal-villages.csv", toCsv(
       rows.map((v) => ({ village: v.village, taluka: v.taluka, district: v.district, gramPanchayat: v.gp ?? "",
-        ta: v.ta ?? "(vacant)", mobile: v.mobile ?? "", status: v.status, works: v.works, areaHa: v.areaHa,
+        ta: v.ta ?? "(vacant)", status: v.status, works: v.works, areaHa: v.areaHa,
         p1: v.byPriority[0], p2: v.byPriority[1], p3: v.byPriority[2], p4: v.byPriority[3], p5: v.byPriority[4] }))))}>
       <Download className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Export</span>
     </button>
@@ -86,7 +86,6 @@ export default function VillagesPage() {
                     {v.ta ? (
                       <span className="flex flex-wrap items-center gap-1.5">
                         {v.ta}
-                        {v.mobile && <a href={`tel:${v.mobile}`} className="chip" style={{ background: "var(--brand-wash)", color: "var(--brand-ink)" }}><Phone className="h-2.5 w-2.5" />{v.mobile}</a>}
                       </span>
                     ) : <Chip kind={taStatusKind(v.status)}>{v.status.startsWith("Vacant") ? "Post vacant" : "No list"}</Chip>}
                   </td>

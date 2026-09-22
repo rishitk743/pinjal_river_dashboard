@@ -35,6 +35,7 @@ export interface Work {
   elng: number | null;  // end longitude
   ta: string | null;    // technical assistant
   tsx: string;          // TA status
+  a?: string;           // lead agency override (when work-level assignment differs from rule default)
 }
 
 export interface AgencyRollup {
@@ -50,14 +51,14 @@ export interface AgencyRollup {
 
 export interface TaRollup {
   taluka: string; office: string; ta: string | null; status: string;
-  mobile: string | null; works: number;
+  works: number;
   villages: string[]; gramPanchayats: string[];
   byPriority: number[]; byAgency: Record<string, number>;
 }
 
 export interface VillageRollup {
   village: string; taluka: string; district: string;
-  gp: string | null; ta: string | null; mobile: string | null;
+  gp: string | null; ta: string | null;
   status: string; works: number; byPriority: number[];
   byAgency: Record<string, number>; areaHa: number;
 }

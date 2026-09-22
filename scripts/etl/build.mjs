@@ -16,6 +16,18 @@ if (!existsSync(BASELINE_DIR)) {
 // gp + ta/mobile/status are real-world administrative/staffing data, not present
 // in the Action Plan sheet. Extract once from the current (authoritative) output.
 const rulesTable = JSON.parse(readFileSync(`${BASELINE_DIR}/rules.json`, "utf8"));
+
+// ---- 1b. Work-ID-specific agency overrides ----------------------------------
+// agency-overrides.json maps Work_ID → { lead } for works whose new department
+// assignment (per the verified Excel reference files) differs from what their
+// Allotment_Rule R-code would produce. This avoids touching the R-code rule
+// engine or the Google Sheet while making the override survive every ETL rebuild.
+const OVERRIDE_PATH = `${ROOT}scripts/etl/agency-overrides.json`;
+const agencyOverrides = existsSync(OVERRIDE_PATH)
+  ? JSON.parse(readFileSync(OVERRIDE_PATH, "utf8"))
+  : {};
+console.log("Loaded", Object.keys(agencyOverrides).length, "work-ID agency overrides");
+
 // NONFOREST|RECHARGE-SHAFT: swapped per direction — VB-G RAM G leads, GSDA is fallback
 // (previously GSDA led). Mirrors the same swap made in the Allotment Rules sheet (R5).
 {
@@ -23,6 +35,18 @@ const rulesTable = JSON.parse(readFileSync(`${BASELINE_DIR}/rules.json`, "utf8")
   if (r5) {
     r5.lead = "VB-G RAM G (Gram Panchayat)";
     r5.fallback = "GSDA (Groundwater Surveys & Development Agency)";
+  }
+  const rDlt67 = rulesTable.find((r) => r.key === "NONFOREST|DLT|ORDER-6-7");
+  if (rDlt67) {
+    rDlt67.lead = "Minor Irrigation (Zilla Parishad)";
+    rDlt67.technicalSanction = "MI (ZP) Executive Engineer";
+    rDlt67.fallback = "VB-G RAM G (Gram Panchayat)";
+  }
+  const rDlt45 = rulesTable.find((r) => r.key === "NONFOREST|DLT|ORDER-4-5");
+  if (rDlt45) {
+    rDlt45.lead = "VB-G RAM G (Gram Panchayat)";
+    rDlt45.technicalSanction = "Agriculture / SWC Dept";
+    rDlt45.fallback = "Minor Irrigation (Zilla Parishad)";
   }
 }
 const villageMetaBaseline = JSON.parse(readFileSync(`${BASELINE_DIR}/by_village.json`, "utf8"));
@@ -157,7 +181,8 @@ const metaOut = {
 
 // ---- 6. rollups --------------------------------------------------------------
 const ruleByKey = new Map(rulesOut.map((r) => [r.key, r]));
-const leadOf = (w) => ruleByKey.get(w.rk)?.lead ?? "Unassigned";
+/** Resolve the lead agency for a work, honouring per-work-ID overrides first. */
+const leadOf = (w) => agencyOverrides[w.i]?.lead ?? ruleByKey.get(w.rk)?.lead ?? "Unassigned";
 
 function bump(map, key, n = 1) { map[key] = (map[key] ?? 0) + n; }
 
@@ -215,14 +240,16 @@ for (const w of works) {
   v.areaHa += w.ar ?? 0;
 }
 // ta/mobile/status per village come from the baseline (real staffing roster, not in the sheet)
+// mobile is intentionally OMITTED from the public dataset to protect personal contact numbers.
 const villageStatusBaseline = new Map(villageMetaBaseline.map((v) => [`${v.village}|${v.taluka}`, v]));
 const byVillageOut = [...villageAcc.values()].map((v) => {
   const b = villageStatusBaseline.get(`${v.village}|${v.taluka}`);
-  return { ...v, ta: b?.ta ?? null, mobile: b?.mobile ?? null, status: b?.status ?? "Unknown", areaHa: Math.round(v.areaHa * 10) / 10 };
+  return { ...v, ta: b?.ta ?? null, status: b?.status ?? "Unknown", areaHa: Math.round(v.areaHa * 10) / 10 };
 }).sort((a, b) => b.works - a.works);
 
 // by_ta.json — TA roster (office, taluka grouping, villages/GPs covered) is baseline
 // staffing metadata; works/byPriority/byAgency are recomputed fresh from the new plan.
+// mobile is intentionally OMITTED from the public dataset to protect personal contact numbers.
 const taBaseline = JSON.parse(readFileSync(`${BASELINE_DIR}/by_ta.json`, "utf8"));
 const taAcc = new Map();
 for (const w of works) {
@@ -236,7 +263,9 @@ for (const w of works) {
 const byTaOut = taBaseline.map((b) => {
   const key = `${b.taluka}|${b.ta ?? "__vacant__"}`;
   const t = taAcc.get(key);
-  return t ? { ...b, works: t.works, byPriority: t.byPriority, byAgency: t.byAgency } : b;
+  // eslint-disable-next-line no-unused-vars
+  const { mobile: _mobile, ...bWithoutMobile } = b;
+  return t ? { ...bWithoutMobile, works: t.works, byPriority: t.byPriority, byAgency: t.byAgency } : bWithoutMobile;
 });
 
 // ---- 7. dependency.json ------------------------------------------------------
@@ -289,7 +318,13 @@ const byTaluka = new Map();
 for (const w of works) {
   const k = slug(w.taluka);
   if (!byTaluka.has(k)) byTaluka.set(k, []);
-  byTaluka.get(k).push({ i: w.i, v: w.v, gp: w.gp, rk: w.rk, lg: w.lg, wc: w.wc, ac: w.ac, ac2: w.ac2, ft: w.ft, st: w.st, p: w.p, ar: w.ar, lat: w.lat, lng: w.lng, elat: w.elat, elng: w.elng, ta: w.ta, tsx: w.tsx });
+  const override = agencyOverrides[w.i];
+  byTaluka.get(k).push({
+    i: w.i, v: w.v, gp: w.gp, rk: w.rk, lg: w.lg, wc: w.wc, ac: w.ac, ac2: w.ac2,
+    ft: w.ft, st: w.st, p: w.p, ar: w.ar, lat: w.lat, lng: w.lng, elat: w.elat, elng: w.elng,
+    ta: w.ta, tsx: w.tsx,
+    ...(override ? { a: override.lead } : {}),
+  });
 }
 for (const [k, list] of byTaluka) writeFileSync(`${DATA_DIR}/works/${k}.json`, JSON.stringify(list));
 
